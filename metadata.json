@@ -1,0 +1,5 @@
+{
+  "name": "量子燃料 AI 交易员",
+  "description": "燃油期货量化交易仪表板原型，具备深度学习优化、自动纠错工作流及微信小程序预览功能。",
+  "requestFramePermissions": []
+}
