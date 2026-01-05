@@ -196,7 +196,7 @@ const WeChatPreview: React.FC<WeChatPreviewProps> = ({ stats, lastTrade, reportT
             className={`flex flex-col items-center transition-colors ${activeTab === 'settings' ? 'text-blue-600' : 'text-gray-400'}`}
         >
             <UserIcon className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] font-medium">我的</span>
+            <span className="text-[10px] font-medium">我</span>
         </button>
       </div>
     </div>
