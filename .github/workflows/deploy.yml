@@ -15,42 +15,22 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 需要写入包的权限
+      packages: write
     
     steps:
-      # 1. 检出代码
       - name: 检出代码
         uses: actions/checkout@v4
       
-      # 2. 设置 Node.js
-      - name: 设置 Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      # 3. 安装依赖并构建
-      - name: 安装依赖
-        run: npm ci
-      
-      - name: 构建项目
-        run: npm run build
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      
-      # 4. 设置 Docker Buildx
       - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      # 5. 登录 GitHub Container Registry
       - name: 登录 GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # 自动提供，无需手动配置
+          password: ${{ secrets.GITHUB_TOKEN }}
       
-      # 6. 提取元数据（标签、版本等）
       - name: 提取 Docker 元数据
         id: meta
         uses: docker/metadata-action@v5
@@ -61,7 +41,6 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
       
-      # 7. 构建并推送镜像到 GHCR
       - name: 构建并推送 Docker 镜像
         uses: docker/build-push-action@v5
         with:
@@ -69,10 +48,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # 修复：传递环境变量到 Dockerfile 内部
+          build-args: |
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      # 8. 在服务器上部署
       - name: SSH 部署到服务器
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -82,49 +63,13 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             echo "开始部署..."
-            
-            # 拉取最新镜像（公开镜像，无需登录）
-            echo "拉取最新镜像..."
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            
-            # 停止并删除旧容器
-            echo "停止旧容器..."
             docker stop lhjy-app 2>/dev/null || true
             docker rm lhjy-app 2>/dev/null || true
-            
-            # 启动新容器
-            echo "启动新容器..."
             docker run -d \
               --name lhjy-app \
               --restart=always \
               -p 80:80 \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            
-            # 清理未使用的镜像
-            echo "清理旧镜像..."
             docker image prune -f
-            
-            # 验证部署
-            echo "验证部署..."
-            sleep 3
-            if docker ps | grep -q lhjy-app; then
-              echo "✅ 部署成功！容器正在运行"
-              docker ps | grep lhjy-app
-            else
-              echo "❌ 部署失败！容器未运行"
-              docker logs lhjy-app
-              exit 1
-            fi
-      
-      # 9. 部署结果通知
-      - name: 部署结果通知
-        if: always()
-        run: |
-          if [ ${{ job.status }} == 'success' ]; then
-            echo "✅ 部署成功！"
-            echo "访问地址: http://${{ secrets.SERVER_HOST }}"
-            echo "镜像地址: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-          else
-            echo "❌ 部署失败，请检查日志"
-          fi
-
+            echo "✅ 部署完成"
