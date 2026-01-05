@@ -2,20 +2,16 @@
 
 # 第一阶段：构建应用
 FROM node:20-alpine AS builder
-
-# 设置工作目录
 WORKDIR /app
 
-# 复制 package.json 和 package-lock.json
+# 声明接收 build-args 传入的变量
+ARG GEMINI_API_KEY
+# 如果你使用的是 Vite，通常需要以 VITE_ 开头才能注入到前端代码
+ENV VITE_GEMINI_API_KEY=$GEMINI_API_KEY
+
 COPY package*.json ./
-
-# 安装依赖
 RUN npm install
-
-# 复制项目文件
 COPY . .
-
-# 构建应用
 RUN npm run build
 
 # 第二阶段：生产环境
