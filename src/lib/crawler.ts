@@ -1,5 +1,5 @@
 import { getCacheData, saveCacheData } from './store';
-import { summarizeContent } from './gemini';
+import { summarizeContent } from './ai';
 import { NewsItem } from '@/types';
 
 // Lock mechanism to prevent concurrent updates in the same process

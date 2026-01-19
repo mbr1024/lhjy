@@ -1,0 +1,89 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  # We will lowercase this in the job setup
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    steps:
+      - name: Lowercase Repo Name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
+          # We pass the token via script injection. 
+          # Note: GITHUB_TOKEN is valid for the duration of the workflow run.
+          script: |
+            echo "Logging into GHCR..."
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            echo "Pulling latest image..."
+            docker pull ghcr.io/${{ env.REPO_LC }}:latest
+            
+            echo "Stopping old container..."
+            docker stop lhjy-app || true
+            docker rm lhjy-app || true
+            
+            echo "Starting new container..."
+            # Adjust port mapping if needed (e.g. 80:3000)
+            docker run -d \
+              --name lhjy-app \
+              --restart always \
+              -p 3000:3000 \
+              -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
+              ghcr.io/${{ env.REPO_LC }}:latest
+            
+            echo "Deployment success!"
+            
+            # Optional: Clean up unused images to save space
+            docker image prune -f
