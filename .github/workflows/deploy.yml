@@ -5,9 +5,8 @@ on:
     branches: ["main"]
 
 env:
-  # Registry is now Docker Hub (default), so we don't need to specify ghcr.io
-  # IMAGE_NAME will be username/repo
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/lhjy
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -16,24 +15,22 @@ jobs:
       contents: read
       packages: write
 
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
+      - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
 
@@ -58,13 +55,15 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            # Login to Docker Hub
-            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin || true
+            # Login to GHCR (Needs Personal Access Token if repo is private)
+            # You can reuse DOCKER_PASSWORD if it's a PAT with package read permissions
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} --password-stdin || true
             
-            echo "Pulling latest image from Docker Hub (with retries)..."
-            # Retry loop for crappy network connections
+            IMAGE_PATH="ghcr.io/${{ github.repository }}:latest"
+            
+            echo "Pulling latest image from GHCR: $IMAGE_PATH"
             for i in {1..5}; do
-              docker pull ${{ secrets.DOCKER_USERNAME }}/lhjy:latest && break
+              docker pull $IMAGE_PATH && break
               echo "Pull failed, retrying in 10s..."
               sleep 10
             done
@@ -79,7 +78,7 @@ jobs:
               --restart always \
               -p 3000:3000 \
               -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
-              ${{ secrets.DOCKER_USERNAME }}/lhjy:latest
+              $IMAGE_PATH
             
             echo "Deployment success!"
             
