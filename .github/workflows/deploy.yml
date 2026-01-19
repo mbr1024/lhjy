@@ -5,9 +5,9 @@ on:
     branches: ["main"]
 
 env:
-  REGISTRY: ghcr.io
-  # We will lowercase this in the job setup
-  IMAGE_NAME: ${{ github.repository }}
+  # Registry is now Docker Hub (default), so we don't need to specify ghcr.io
+  # IMAGE_NAME will be username/repo
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/lhjy
 
 jobs:
   build-and-push:
@@ -23,18 +23,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
 
@@ -51,9 +50,6 @@ jobs:
     needs: build-and-push
     
     steps:
-      - name: Lowercase Repo Name
-        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -61,29 +57,26 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
-          # We pass the token via script injection. 
-          # Note: GITHUB_TOKEN is valid for the duration of the workflow run.
           script: |
-            echo "Logging into GHCR..."
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # No need to login to pull public images from Docker Hub, 
+            # or login if it's a private repo:
+            # echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
             
-            echo "Pulling latest image..."
-            docker pull ghcr.io/${{ env.REPO_LC }}:latest
+            echo "Pulling latest image from Docker Hub..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/lhjy:latest
             
             echo "Stopping old container..."
             docker stop lhjy-app || true
             docker rm lhjy-app || true
             
             echo "Starting new container..."
-            # Adjust port mapping if needed (e.g. 80:3000)
             docker run -d \
               --name lhjy-app \
               --restart always \
               -p 3000:3000 \
               -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
-              ghcr.io/${{ env.REPO_LC }}:latest
+              ${{ secrets.DOCKER_USERNAME }}/lhjy:latest
             
             echo "Deployment success!"
             
-            # Optional: Clean up unused images to save space
             docker image prune -f
