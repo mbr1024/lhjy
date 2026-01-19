@@ -58,14 +58,10 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            # 清理旧的登录干扰，如果是公开镜像直接拉取最稳定
-            docker logout ghcr.io || true
-            
-            # 使用强制小写的镜像路径
+            # 定义镜像路径（强制小写）
             IMAGE_PATH="ghcr.io/${GITHUB_REPOSITORY,,}:latest"
             
             echo "Pulling latest image: $IMAGE_PATH"
-            # 增加清理步骤，防止本地缓存干扰
             docker pull $IMAGE_PATH
             
             echo "Restarting container..."
