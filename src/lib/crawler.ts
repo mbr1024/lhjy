@@ -15,8 +15,8 @@ export async function updateData(): Promise<boolean> {
     console.log('Starting background data update...');
 
     try {
-        // 1. Fetch V2EX
-        const res = await fetch('https://www.v2ex.com/api/topics/hot.json', {
+        // 1. Fetch V2EX via proxy
+        const res = await fetch('https://suyl.website', {
             cache: 'no-store', // Ensure fresh data
         });
 
