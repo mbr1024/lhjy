@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: Consolas, Monaco, "Fira Code", monospace;
+
+  --color-vscode-bg: #1e1e1e;
+  --color-vscode-text: #d4d4d4;
+  --color-vscode-blue: #569cd6;
+  --color-vscode-red: #ce9178;
+  --color-vscode-gray: #808080;
+  --color-vscode-selection: #264f78;
+}
+
+body {
+  background-color: var(--color-vscode-bg);
+  color: var(--color-vscode-text);
+  font-family: var(--font-mono);
+}

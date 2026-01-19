@@ -1,0 +1,97 @@
+import Link from 'next/link';
+import LogItem from './LogItem';
+import { NewsItem } from '@/types';
+import { summarizeContent } from '@/lib/gemini';
+
+async function getV2EXHotTopics(): Promise<NewsItem[]> {
+    try {
+        const res = await fetch('https://www.v2ex.com/api/topics/hot.json', {
+            next: { revalidate: 3600 }, // Cache for 1 hour
+        });
+
+        if (!res.ok) {
+            throw new Error('Failed to fetch data');
+        }
+
+        const data = await res.json();
+
+        // Limit to top 5 for demo to avoid excessive API calls/latency
+        const topItems = data.slice(0, 5);
+
+        // Fetch summaries in parallel
+        const itemsWithSummary = await Promise.all(topItems.map(async (item: any) => {
+            // Parse time from created timestamp
+            const date = new Date(item.created * 1000);
+            const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+            // AI Summary
+            let summary: string[] = [];
+            try {
+                // Add timeout or error handling potentially
+                summary = await summarizeContent(item.title, item.content);
+            } catch (e) {
+                console.error(`Error summarizing ${item.id}`, e);
+                // Fallback: simple text truncation
+                summary = [
+                    item.content.substring(0, 100).replace(/\n/g, ' ') + (item.content.length > 100 ? '...' : '')
+                ];
+            }
+            // Ensure we fallback if AI returns empty array for some reason
+            if (summary.length === 0) {
+                summary = [item.content.substring(0, 100).replace(/\n/g, ' ') + (item.content.length > 100 ? '...' : '')];
+            }
+
+            return {
+                id: item.id,
+                title: item.title,
+                source: 'V2EX',
+                time: timeStr,
+                link: item.url,
+                summary: summary,
+            };
+        }));
+
+        return itemsWithSummary;
+    } catch (error) {
+        console.error('Error fetching V2EX data:', error);
+        // Return empty or fallback
+        return [];
+    }
+}
+
+export default async function LogList() {
+    const items = await getV2EXHotTopics();
+
+    return (
+        <div className="w-full max-w-4xl mx-auto font-mono text-sm sm:text-base">
+            <div className="py-4 px-2 border-b border-vscode-selection mb-4 flex justify-between items-end">
+                <h1 className="text-xl font-bold text-vscode-blue">
+                    ~/news/aggregator.log
+                </h1>
+                <div className="text-xs text-vscode-gray flex gap-4">
+                    <span>Data Source: V2EX Hot</span>
+                    <span>v1.0.0</span>
+                </div>
+            </div>
+
+            <div className="space-y-0">
+                {items.length > 0 ? (
+                    items.map((item) => (
+                        <LogItem
+                            key={item.id}
+                            item={item}
+                        />
+                    ))
+                ) : (
+                    <div className="p-4 text-vscode-red">
+                        Failed to load data or no hot topics found.
+                    </div>
+                )}
+            </div>
+
+            <div className="mt-8 px-2 text-vscode-gray animate-pulse">
+                _
+            </div>
+        </div>
+    );
+}
