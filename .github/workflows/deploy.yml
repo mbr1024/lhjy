@@ -58,11 +58,16 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            # Login to Docker Hub to ensure access (fixes 403 on restricted mirrors/private repos)
-            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+            # Login to Docker Hub
+            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin || true
             
-            echo "Pulling latest image from Docker Hub..."
-            docker pull ${{ secrets.DOCKER_USERNAME }}/lhjy:latest
+            echo "Pulling latest image from Docker Hub (with retries)..."
+            # Retry loop for crappy network connections
+            for i in {1..5}; do
+              docker pull ${{ secrets.DOCKER_USERNAME }}/lhjy:latest && break
+              echo "Pull failed, retrying in 10s..."
+              sleep 10
+            done
             
             echo "Stopping old container..."
             docker stop lhjy-app || true
