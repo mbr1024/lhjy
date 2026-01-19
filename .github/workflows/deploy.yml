@@ -57,9 +57,11 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
+          envs: GITHUB_REPOSITORY
           script: |
-            # 定义镜像路径（强制小写）
-            IMAGE_PATH="ghcr.io/${GITHUB_REPOSITORY,,}:latest"
+            # 在远端服务器将仓库名转换为小写
+            REPO_LOWER=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+            IMAGE_PATH="ghcr.io/${REPO_LOWER}:latest"
             
             echo "Pulling latest image: $IMAGE_PATH"
             docker pull $IMAGE_PATH
