@@ -1,5 +1,9 @@
 import { updateData } from '@/lib/crawler';
 
+// Force dynamic rendering - don't prerender at build time
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET() {
     // Trigger update logic
     const success = await updateData();
