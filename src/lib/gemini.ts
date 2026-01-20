@@ -1,6 +1,6 @@
 const apiKey = process.env.SILICONFLOW_API_KEY!;
 const API_URL = "https://api.siliconflow.cn/v1/chat/completions";
-const MODEL = "Qwen/Qwen2.5-7B-Instruct"; // Free model
+const MODEL = "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"; // Free model
 
 export async function summarizeContent(title: string, content: string, replies: string = ""): Promise<string[]> {
     try {
