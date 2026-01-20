@@ -59,7 +59,6 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           envs: GITHUB_REPOSITORY
           script: |
-            # 在远端服务器将仓库名转换为小写
             REPO_LOWER=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
             IMAGE_PATH="ghcr.io/${REPO_LOWER}:latest"
             
@@ -76,6 +75,8 @@ jobs:
               -p 3000:3000 \
               -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
               -e HOSTNAME="0.0.0.0" \
+              -e TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }} \
+              -e TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }} \
               $IMAGE_PATH
             
             echo "Deployment success!"
