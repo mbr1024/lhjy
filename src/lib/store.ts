@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { NewsItem } from '@/types';
 
-const CACHE_FILE = path.join(process.cwd(), 'src/data/cache.json');
+const CACHE_FILE = path.join('/tmp', 'cache.json');
 
 export interface CacheData {
     lastUpdated: number;
