@@ -1,0 +1,8 @@
+name = "lhjy"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lhjy-news"
+database_id = "584e29bf-138b-4d76-beb7-a95d9387ad34"

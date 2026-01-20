@@ -1,28 +1,30 @@
-import fs from 'fs/promises';
-import path from 'path';
 import { NewsItem } from '@/types';
-
-const CACHE_FILE = path.join('/tmp', 'cache.json');
+import { getCacheData as getD1CacheData, saveCacheData as saveD1CacheData } from './d1-store';
 
 export interface CacheData {
     lastUpdated: number;
     items: NewsItem[];
 }
 
-export async function getCacheData(): Promise<CacheData> {
+// Get D1 database from Cloudflare binding
+function getDB() {
     try {
-        const data = await fs.readFile(CACHE_FILE, 'utf-8');
-        return JSON.parse(data);
+        // Try to get from request context (runtime)
+        const { getRequestContext } = require('@cloudflare/next-on-pages');
+        const context = getRequestContext();
+        return context?.env?.DB;
     } catch (error) {
-        // If file missing or error, return empty
-        return { lastUpdated: 0, items: [] };
+        console.error('Failed to get D1 database:', error);
+        throw new Error('D1 database not available. Make sure you are running with Wrangler.');
     }
 }
 
+export async function getCacheData(): Promise<CacheData> {
+    const db = getDB();
+    return await getD1CacheData(db);
+}
+
 export async function saveCacheData(items: NewsItem[]): Promise<void> {
-    const data: CacheData = {
-        lastUpdated: Date.now(),
-        items,
-    };
-    await fs.writeFile(CACHE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const db = getDB();
+    return await saveD1CacheData(db, items);
 }
