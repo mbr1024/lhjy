@@ -75,6 +75,7 @@ jobs:
               --restart always \
               -p 3000:3000 \
               -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
+              -e HOSTNAME="0.0.0.0" \
               $IMAGE_PATH
             
             echo "Deployment success!"
