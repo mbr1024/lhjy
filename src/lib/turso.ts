@@ -1,8 +1,19 @@
-import { createClient } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client';
 
-const client = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN!,
-});
+let client: Client | null = null;
 
-export default client;
+function getClient(): Client {
+    if (!client) {
+        const url = process.env.TURSO_DATABASE_URL;
+        const authToken = process.env.TURSO_AUTH_TOKEN;
+
+        if (!url || !authToken) {
+            throw new Error('TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set');
+        }
+
+        client = createClient({ url, authToken });
+    }
+    return client;
+}
+
+export default getClient();
