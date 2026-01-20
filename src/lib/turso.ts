@@ -16,4 +16,11 @@ function getClient(): Client {
     return client;
 }
 
-export default getClient();
+// Export a Proxy that lazily initializes the client on first method call
+export default new Proxy({} as Client, {
+    get(target, prop) {
+        const actualClient = getClient();
+        const value = actualClient[prop as keyof Client];
+        return typeof value === 'function' ? value.bind(actualClient) : value;
+    }
+});
