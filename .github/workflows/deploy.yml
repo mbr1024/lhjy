@@ -62,22 +62,41 @@ jobs:
             REPO_LOWER=$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
             IMAGE_PATH="ghcr.io/${REPO_LOWER}:latest"
             
-            echo "Pulling latest image: $IMAGE_PATH"
+            echo "🔄 Pulling latest image: $IMAGE_PATH"
             docker pull $IMAGE_PATH
             
-            echo "Restarting container..."
+            echo "🛑 Stopping old container..."
             docker stop lhjy-app || true
             docker rm lhjy-app || true
             
+            echo "🚀 Starting new container..."
             docker run -d \
               --name lhjy-app \
               --restart always \
-              -p 3000:3000 \
+              -p 80:3000 \
               -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
               -e HOSTNAME="0.0.0.0" \
               -e TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }} \
               -e TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }} \
+              --health-cmd="curl -f http://localhost:3000 || exit 1" \
+              --health-interval=30s \
+              --health-timeout=10s \
+              --health-retries=3 \
               $IMAGE_PATH
             
-            echo "Deployment success!"
+            echo "⏳ Waiting for container to be healthy..."
+            sleep 5
+            
+            if docker ps | grep -q lhjy-app; then
+              echo "✅ Deployment successful!"
+              echo "📊 Container status:"
+              docker ps --filter name=lhjy-app --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            else
+              echo "❌ Deployment failed!"
+              echo "📋 Container logs:"
+              docker logs lhjy-app --tail 50
+              exit 1
+            fi
+            
+            echo "🧹 Cleaning up old images..."
             docker image prune -f
