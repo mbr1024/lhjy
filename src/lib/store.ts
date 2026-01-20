@@ -1,30 +1,74 @@
 import { NewsItem } from '@/types';
-import { getCacheData as getD1CacheData, saveCacheData as saveD1CacheData } from './d1-store';
+import turso from './turso';
 
 export interface CacheData {
     lastUpdated: number;
     items: NewsItem[];
 }
 
-// Get D1 database from Cloudflare binding
-function getDB() {
+export async function getCacheData(): Promise<CacheData> {
     try {
-        // Try to get from request context (runtime)
-        const { getRequestContext } = require('@cloudflare/next-on-pages');
-        const context = getRequestContext();
-        return context?.env?.DB;
+        // Get metadata
+        const metaResult = await turso.execute(
+            'SELECT last_updated FROM cache_metadata WHERE key = ?',
+            ['news_cache']
+        );
+
+        const lastUpdated = metaResult.rows[0]?.last_updated as number || 0;
+
+        // Get news items
+        const itemsResult = await turso.execute(
+            'SELECT id, title, source, time, link, summary FROM news_items ORDER BY id DESC'
+        );
+
+        const items: NewsItem[] = itemsResult.rows.map(row => ({
+            id: row.id as number,
+            title: row.title as string,
+            source: row.source as string,
+            time: row.time as string,
+            link: row.link as string,
+            summary: JSON.parse(row.summary as string)
+        }));
+
+        return { lastUpdated, items };
     } catch (error) {
-        console.error('Failed to get D1 database:', error);
-        throw new Error('D1 database not available. Make sure you are running with Wrangler.');
+        console.error('Turso getCacheData error:', error);
+        return { lastUpdated: 0, items: [] };
     }
 }
 
-export async function getCacheData(): Promise<CacheData> {
-    const db = getDB();
-    return await getD1CacheData(db);
-}
-
 export async function saveCacheData(items: NewsItem[]): Promise<void> {
-    const db = getDB();
-    return await saveD1CacheData(db, items);
+    try {
+        console.log(`[Turso] Saving ${items.length} items to database...`);
+
+        // Update metadata
+        await turso.execute(
+            'UPDATE cache_metadata SET last_updated = ? WHERE key = ?',
+            [Date.now(), 'news_cache']
+        );
+        console.log('[Turso] Metadata updated');
+
+        // Clear old items
+        await turso.execute('DELETE FROM news_items');
+        console.log('[Turso] Old items cleared');
+
+        // Insert new items
+        for (const item of items) {
+            await turso.execute(
+                'INSERT INTO news_items (id, title, source, time, link, summary) VALUES (?, ?, ?, ?, ?, ?)',
+                [
+                    item.id,
+                    item.title,
+                    item.source,
+                    item.time,
+                    item.link,
+                    JSON.stringify(item.summary)
+                ]
+            );
+        }
+        console.log(`[Turso] Successfully saved ${items.length} items`);
+    } catch (error) {
+        console.error('Turso saveCacheData error:', error);
+        throw error;
+    }
 }

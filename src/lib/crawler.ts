@@ -22,7 +22,13 @@ export async function updateData(): Promise<boolean> {
 
         if (!res.ok) throw new Error('Failed to fetch from V2EX');
 
-        const data = await res.json();
+        const data = await res.json() as Array<{
+            id: number;
+            title: string;
+            content: string;
+            url: string;
+            created: number;
+        }>;
 
         // Read existing cache to avoid re-analyzing existing items
         const { items: existingItems } = await getCacheData();
@@ -59,7 +65,7 @@ export async function updateData(): Promise<boolean> {
                     const replies = await repliesRes.json();
                     // Extract plain text from top 20 replies
                     repliesText = Array.isArray(replies)
-                        ? replies.slice(0, 20).map((r: any) => `${r.member.username}: ${r.content}`).join('\n')
+                        ? replies.slice(0, 20).map((r: { member: { username: string }; content: string }) => `${r.member.username}: ${r.content}`).join('\n')
                         : "No replies";
                 }
 

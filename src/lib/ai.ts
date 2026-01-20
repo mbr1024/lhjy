@@ -44,7 +44,7 @@ export async function summarizeContent(title: string, content: string, replies: 
             throw new Error(`API Error: ${response.status} ${errText}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as { choices: Array<{ message: { content: string } }> };
         const text = data.choices[0].message.content;
 
         // Split by new lines and clean up bullets
@@ -58,8 +58,8 @@ export async function summarizeContent(title: string, content: string, replies: 
 
         // Log to file
         try {
-            const fs = require('fs');
-            const path = require('path');
+            const fs = await import('fs');
+            const path = await import('path');
             fs.appendFileSync(path.join(process.cwd(), 'debug.log'), `[${new Date().toISOString()}] AI Error: ${error}\n`);
         } catch (e) { console.error("Log failed", e); }
 

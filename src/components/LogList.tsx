@@ -7,8 +7,6 @@ export default async function LogList() {
     const { items, lastUpdated } = await getCacheData();
 
     // 2. Trigger Background Update if stale (Lazy)
-    // Next.js Server Components run on server, so we can call this directly.
-    // It is "fire and forget" inside the function.
     await checkAndTriggerUpdate();
 
     const lastUpdateTime = lastUpdated > 0
