@@ -8,6 +8,11 @@ export interface CacheData {
 
 export async function getCacheData(): Promise<CacheData> {
     try {
+        // Return empty data if client not available (build time)
+        if (!turso) {
+            return { lastUpdated: 0, items: [] };
+        }
+
         // Get metadata
         const metaResult = await turso.execute(
             'SELECT last_updated FROM cache_metadata WHERE key = ?',
