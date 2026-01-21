@@ -34,8 +34,8 @@ export async function updateData(): Promise<boolean> {
         const { items: existingItems } = await getCacheData();
         const existingMap = new Map(existingItems.map(i => [i.id, i]));
 
-        // Limit to top 30
-        const topItems = data.slice(0, 30);
+        // Process all items from API (no limit)
+        const topItems = data;
         const newItems: NewsItem[] = [];
 
         // 2. Process items (Sequentially for AI)
@@ -57,16 +57,21 @@ export async function updateData(): Promise<boolean> {
             let summary: string[] = [];
             try {
                 console.log(`Fetching replies for: ${item.title}`);
-                // Fetch replies
-                const repliesRes = await fetch(`https://www.v2ex.com/api/replies/show.json?topic_id=${item.id}`, { cache: 'no-store' });
-                let repliesText = "No replies";
+                // Fetch replies via CF proxy (same domain as hot topics)
+                const repliesRes = await fetch(`https://suyl.website/replies?topic_id=${item.id}`, { cache: 'no-store' });
+                let repliesText = "暂无评论";
 
                 if (repliesRes.ok) {
                     const replies = await repliesRes.json();
-                    // Extract plain text from top 20 replies
-                    repliesText = Array.isArray(replies)
-                        ? replies.slice(0, 20).map((r: { member: { username: string }; content: string }) => `${r.member.username}: ${r.content}`).join('\n')
-                        : "No replies";
+                    // Extract ALL replies with floor numbers for comprehensive analysis
+                    const totalCount = Array.isArray(replies) ? replies.length : 0;
+                    repliesText = Array.isArray(replies) && replies.length > 0
+                        ? `【共 ${totalCount} 条评论】\n` +
+                        replies.map((r: { member: { username: string }; content: string }, i: number) =>
+                            `#${i + 1} @${r.member.username}: ${r.content}`
+                        ).join('\n')
+                        : "暂无评论";
+                    console.log(`Fetched ${totalCount} replies for topic ${item.id}`);
                 }
 
                 console.log(`Analyzing: ${item.title}`);

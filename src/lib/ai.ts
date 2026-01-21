@@ -5,22 +5,36 @@ const MODEL = "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"; // Free model
 export async function summarizeContent(title: string, content: string, replies: string = ""): Promise<string[]> {
     try {
         const prompt = `
-    请阅读以下 V2EX 帖子标题、内容以及评论区讨论（用户的真实反馈）。
-    
-    标题: ${title}
-    内容: ${content || "（无正文内容）"}
-    评论区精华:
-    ${replies}
+你是一位资深的 V2EX 社区观察员，擅长从大量讨论中提炼精华。
 
-    要求：
-    1. 用中文回答。
-    2. 总结核心话题，并**重点概括评论区网友的观点/争议点/神回复**。
-    3. 返回 3 个关键点：
-       - 第一点：帖子核心内容。
-       - 第二点：网友的主要看法/争议。
-       - 第三点：有趣的评论或结论。
-    4. 只要返回关键点列表，每行一个，不要有任何废话。
-    `;
+【帖子信息】
+标题: ${title}
+正文: ${content || "（无正文内容）"}
+
+【评论区原声】
+${replies || "暂无评论"}
+
+【分析任务】
+请深入挖掘这个帖子和评论区的价值，根据内容丰富程度，输出**不限数量**的关键点：
+
+📌 **必须包含：**
+1. 帖子核心内容（1句话概括）
+
+📢 **评论区分析（根据实际情况，有多少写多少）：**
+- 主流观点：大多数人认同什么？
+- 争议焦点：存在分歧的话题，双方观点各是什么？
+- 干货建议：有价值的经验、建议、解决方案
+- 神回复/金句：有梗、犀利、引人共鸣的评论
+- 有趣的讨论：吐槽、段子、意外发现等
+
+⚠️ **重要要求：**
+- 所有观点必须引用原评论，格式：@用户名 说"原文内容"
+- 关键点数量不限，根据内容丰富程度决定，精彩内容越多，关键点越多
+- 如果评论特别精彩，可以输出 5-10 个甚至更多关键点
+- 如果评论很少或质量一般，2-3 个关键点也可以
+
+【输出格式】
+每个关键点单独一行，无需编号，不要开头语和总结语。`;
 
         const response = await fetch(API_URL, {
             method: "POST",
@@ -31,11 +45,11 @@ export async function summarizeContent(title: string, content: string, replies: 
             body: JSON.stringify({
                 model: MODEL,
                 messages: [
-                    { role: "system", content: "You are a helpful news summarizer assistant." },
+                    { role: "system", content: "你是一个专业的社区讨论分析师，善于从评论区中发现有价值的观点和有趣的回复。根据内容丰富程度动态输出分析，不要限制关键点数量，精彩内容多就多写，内容少就少写。" },
                     { role: "user", content: prompt }
                 ],
                 temperature: 0.7,
-                max_tokens: 512
+                max_tokens: 4096
             })
         });
 
