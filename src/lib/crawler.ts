@@ -43,17 +43,8 @@ export async function updateData(): Promise<boolean> {
             const date = new Date(item.created * 1000);
             const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
-            // Check if we already have a valid summary for this ID
-            if (existingMap.has(item.id)) {
-                const existing = existingMap.get(item.id)!;
-                // Reuse only if good summary
-                if (existing.summary && existing.summary.length > 0 && !existing.summary[0].includes("暂时不可用")) {
-                    console.log(`Skipping already analyzed item: ${item.title}`);
-                    newItems.push(existing);
-                    continue;
-                }
-            }
 
+            // 每次都重新分析（评论会实时更新）
             let summary: string[] = [];
             try {
                 console.log(`Fetching replies for: ${item.title}`);
