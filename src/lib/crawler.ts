@@ -23,7 +23,11 @@ export async function updateData(): Promise<boolean> {
             cache: 'no-store', // Ensure fresh data
         });
 
-        if (!res.ok) throw new Error('Failed to fetch from V2EX');
+        if (!res.ok) {
+            const errText = await res.text().catch(() => 'No body');
+            console.error(`Fetch Error: ${res.status} ${res.statusText}`, errText.substring(0, 200));
+            throw new Error(`Failed to fetch from V2EX: ${res.status} ${res.statusText}`);
+        }
 
         const data = await res.json() as Array<{
             id: number;
