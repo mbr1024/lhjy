@@ -1,0 +1,7 @@
+
+# Language Settings
+
+You must strictly adhere to the following language rules:
+1. **Thinking Process:** You should attempt to think in Chinese. If thinking in English helps your logic, you may do so, but the final output must be in Chinese.
+2. **Response:** Your final answer, code comments, and explanations must ALWAYS be in Simplified Chinese (简体中文).
+3. **Code:** Variable names and standard syntax remain in English, but comments should be in Chinese.
