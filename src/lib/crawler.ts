@@ -1,4 +1,4 @@
-import { getCacheData, upsertItem } from './store';
+import { getCacheData, upsertItem, cleanupCache, ensureSchema } from './store';
 import { summarizeContent } from './ai';
 import { NewsItem } from '@/types';
 
@@ -15,6 +15,9 @@ export async function updateData(): Promise<boolean> {
     console.log('Starting background data update...');
 
     try {
+        // Ensure DB schema is correct (add rank column if missing)
+        await ensureSchema();
+
         // 1. Fetch V2EX via proxy
         const res = await fetch('https://suyl.website', {
             cache: 'no-store', // Ensure fresh data
@@ -32,9 +35,13 @@ export async function updateData(): Promise<boolean> {
 
         // Process all items from API
         const topItems = data;
+        const validIds: number[] = [];
 
         // 2. Process items (Sequentially for AI)
-        for (const item of topItems) {
+        for (let i = 0; i < topItems.length; i++) {
+            const item = topItems[i];
+            validIds.push(item.id);
+
             const date = new Date(item.created * 1000);
             const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 
@@ -42,7 +49,7 @@ export async function updateData(): Promise<boolean> {
             // 每次都重新分析（评论会实时更新）
             let summary: string[] = [];
             try {
-                console.log(`Fetching replies for: ${item.title}`);
+                console.log(`Analyzing [${i + 1}/${topItems.length}]: ${item.title}`);
                 // Fetch replies via CF proxy (same domain as hot topics)
                 const repliesRes = await fetch(`https://suyl.website/replies?topic_id=${item.id}`, { cache: 'no-store' });
                 let repliesText = "暂无评论";
@@ -57,11 +64,9 @@ export async function updateData(): Promise<boolean> {
                             `#${i + 1} @${r.member.username}: ${r.content}`
                         ).join('\n')
                         : "暂无评论";
-                    console.log(`Fetched ${totalCount} replies for topic ${item.id}`);
                 }
 
-                console.log(`Analyzing: ${item.title}`);
-                // Delay 1s
+                // Delay 1s to be nice
                 await new Promise(r => setTimeout(r, 1000));
 
                 summary = await summarizeContent(item.title, item.content, repliesText);
@@ -83,8 +88,12 @@ export async function updateData(): Promise<boolean> {
                 time: timeStr,
                 link: item.url,
                 summary: summary,
+                rank: i // Use index as rank
             });
         }
+
+        // 3. Cleanup stale items (remove items not in current hot list)
+        await cleanupCache(validIds);
 
         console.log('Data update complete.');
         return true;

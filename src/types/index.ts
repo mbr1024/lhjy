@@ -5,4 +5,5 @@ export interface NewsItem {
     time: string;
     link: string;
     summary: string[];
+    rank?: number;
 }

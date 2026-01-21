@@ -23,7 +23,7 @@ export async function getCacheData(): Promise<CacheData> {
 
         // Get news items
         const itemsResult = await turso.execute(
-            'SELECT id, title, source, time, link, summary FROM news_items ORDER BY id DESC'
+            'SELECT id, title, source, time, link, summary, rank FROM news_items ORDER BY rank ASC, id DESC'
         );
 
         const items: NewsItem[] = itemsResult.rows.map(row => ({
@@ -39,6 +39,38 @@ export async function getCacheData(): Promise<CacheData> {
     } catch (error) {
         console.error('Turso getCacheData error:', error);
         return { lastUpdated: 0, items: [] };
+    }
+}
+
+// Ensure schema has rank column
+export async function ensureSchema(): Promise<void> {
+    try {
+        if (!turso) return;
+        // Try to add rank column. Ignored if exists (sort of, we catch error)
+        // Turso/SQLite might throw if column exists.
+        try {
+            await turso.execute('ALTER TABLE news_items ADD COLUMN rank INTEGER DEFAULT 9999');
+            console.log('[Turso] Added rank column');
+        } catch (e) {
+            // Ignore error if column likely exists
+        }
+    } catch (error) {
+        console.error('Turso ensureSchema error:', error);
+    }
+}
+
+export async function cleanupCache(validIds: number[]): Promise<void> {
+    try {
+        if (!turso || validIds.length === 0) return;
+
+        const placeholders = validIds.map(() => '?').join(',');
+        const rs = await turso.execute(
+            `DELETE FROM news_items WHERE id NOT IN (${placeholders})`,
+            validIds
+        );
+        console.log(`[Turso] Cleaned up ${rs.rowsAffected} stale items`);
+    } catch (error) {
+        console.error('Turso cleanupCache error:', error);
     }
 }
 
@@ -85,15 +117,16 @@ export async function upsertItem(item: NewsItem): Promise<void> {
 
         // 使用 INSERT OR REPLACE 实现 upsert
         await turso.execute(
-            `INSERT OR REPLACE INTO news_items (id, title, source, time, link, summary) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT OR REPLACE INTO news_items (id, title, source, time, link, summary, rank) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 item.id,
                 item.title,
                 item.source,
                 item.time,
                 item.link,
-                JSON.stringify(item.summary)
+                JSON.stringify(item.summary),
+                item.rank ?? 9999
             ]
         );
 
@@ -103,7 +136,7 @@ export async function upsertItem(item: NewsItem): Promise<void> {
             [Date.now(), 'news_cache']
         );
 
-        console.log(`[Turso] Saved item: ${item.title.substring(0, 30)}...`);
+        console.log(`[Turso] Saved item: ${item.title.substring(0, 30)}... (Rank: ${item.rank})`);
     } catch (error) {
         console.error('Turso upsertItem error:', error);
         throw error;
