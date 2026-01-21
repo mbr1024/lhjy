@@ -11,11 +11,17 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          SILICONFLOW_API_KEY: ${{ secrets.SILICONFLOW_API_KEY }}
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
+          command_timeout: 30m
+          envs: SILICONFLOW_API_KEY,TURSO_DATABASE_URL,TURSO_AUTH_TOKEN
           script: |
             set -e
             
@@ -34,7 +40,7 @@ jobs:
             echo "✅ 代码更新完成"
             
             # 2. 先构建新镜像（旧容器继续运行）
-            echo "� [2/5] 构建新 Docker 镜像..."
+            echo "🔨 [2/5] 构建新 Docker 镜像..."
             docker build -t lhjy-app:new .
             echo "✅ 新镜像构建完成"
             
@@ -56,10 +62,10 @@ jobs:
               --name lhjy-app \
               --restart always \
               -p 80:3000 \
-              -e SILICONFLOW_API_KEY=${{ secrets.SILICONFLOW_API_KEY }} \
+              -e SILICONFLOW_API_KEY="$SILICONFLOW_API_KEY" \
               -e HOSTNAME="0.0.0.0" \
-              -e TURSO_DATABASE_URL=${{ secrets.TURSO_DATABASE_URL }} \
-              -e TURSO_AUTH_TOKEN=${{ secrets.TURSO_AUTH_TOKEN }} \
+              -e TURSO_DATABASE_URL="$TURSO_DATABASE_URL" \
+              -e TURSO_AUTH_TOKEN="$TURSO_AUTH_TOKEN" \
               --health-cmd="curl -f http://localhost:3000 || exit 1" \
               --health-interval=30s \
               --health-timeout=10s \
