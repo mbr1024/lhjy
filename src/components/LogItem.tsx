@@ -23,38 +23,41 @@ export default function LogItem({ item }: LogItemProps) {
     };
 
     return (
-        <div className="mb-1">
+        <div className="mb-1 border-b border-white/5 sm:border-none pb-1 sm:pb-0">
             <div
-                className="cursor-pointer hover:bg-white/5 py-0.5 px-2 flex items-center select-none"
+                className="cursor-pointer hover:bg-white/5 py-1 sm:py-0.5 px-2 flex flex-col sm:flex-row sm:items-center select-none"
                 onClick={toggle}
             >
-                {/* Source */}
-                <span className={`w-16 shrink-0 font-bold ${getSourceColor(item.source)}`}>
-                    [{item.source}]
-                </span>
+                {/* Meta Info Row */}
+                <div className="flex items-center mb-1 sm:mb-0">
+                    {/* Source */}
+                    <span className={`w-16 shrink-0 font-bold ${getSourceColor(item.source)}`}>
+                        [{item.source}]
+                    </span>
 
-                {/* Time */}
-                <span className="w-16 shrink-0 text-vscode-gray mr-2">
-                    {item.time}
-                </span>
+                    {/* Time */}
+                    <span className="w-16 shrink-0 text-vscode-gray mr-2">
+                        {item.time}
+                    </span>
 
-                {/* Separator */}
-                <span className="text-vscode-gray mr-2">|</span>
+                    {/* Separator (Hidden on mobile) */}
+                    <span className="hidden sm:inline text-vscode-gray mr-2">|</span>
+                </div>
 
                 {/* Title */}
-                <span className="text-vscode-text hover:underline truncate">
+                <span className="text-vscode-text hover:underline break-words leading-tight sm:truncate">
                     {item.title}
                 </span>
             </div>
 
             {/* Expanded Summary */}
             {isExpanded && (
-                <div className="pl-20 pr-4 py-2 text-sm text-vscode-gray">
+                <div className="pl-4 sm:pl-20 pr-2 sm:pr-4 py-2 text-sm text-vscode-gray">
                     <div className="border-l-2 border-vscode-selection pl-3 py-1 bg-white/5">
                         <div className="font-bold mb-1 text-vscode-blue"> &gt; 摘要：</div>
-                        <ol className="list-decimal list-inside space-y-0.5">
+                        <ol className="list-decimal list-inside space-y-1 sm:space-y-0.5">
                             {item.summary.map((point, idx) => (
-                                <li key={idx}>
+                                <li key={idx} className="leading-relaxed">
                                     {point}
                                 </li>
                             ))}

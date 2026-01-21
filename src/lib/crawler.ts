@@ -1,4 +1,4 @@
-import { getCacheData, saveCacheData } from './store';
+import { getCacheData, upsertItem } from './store';
 import { summarizeContent } from './ai';
 import { NewsItem } from '@/types';
 
@@ -30,13 +30,8 @@ export async function updateData(): Promise<boolean> {
             created: number;
         }>;
 
-        // Read existing cache to avoid re-analyzing existing items
-        const { items: existingItems } = await getCacheData();
-        const existingMap = new Map(existingItems.map(i => [i.id, i]));
-
-        // Process all items from API (no limit)
+        // Process all items from API
         const topItems = data;
-        const newItems: NewsItem[] = [];
 
         // 2. Process items (Sequentially for AI)
         for (const item of topItems) {
@@ -80,7 +75,8 @@ export async function updateData(): Promise<boolean> {
                 summary = [item.content.substring(0, 100).replace(/\n/g, ' ') + '...'];
             }
 
-            newItems.push({
+            // 分析完一个就入库一个
+            await upsertItem({
                 id: item.id,
                 title: item.title,
                 source: 'V2EX',
@@ -90,8 +86,6 @@ export async function updateData(): Promise<boolean> {
             });
         }
 
-        // 3. Save to cache
-        await saveCacheData(newItems);
         console.log('Data update complete.');
         return true;
 
@@ -106,10 +100,10 @@ export async function updateData(): Promise<boolean> {
 export async function checkAndTriggerUpdate() {
     const { lastUpdated } = await getCacheData();
     const now = Date.now();
-    const TEN_MINUTES = 10 * 60 * 1000;
+    const ONE_HOUR = 60 * 60 * 1000;
 
-    if (now - lastUpdated > TEN_MINUTES) {
-        console.log('Cache stale, triggering background update...');
+    if (now - lastUpdated > ONE_HOUR) {
+        console.log('Cache stale (1h), triggering background update...');
         // Fire and forget - do NOT await
         updateData().catch(e => console.error('Background update crashed', e));
     }

@@ -15,11 +15,11 @@ export default async function LogList() {
 
     return (
         <div className="w-full max-w-4xl mx-auto font-mono text-sm sm:text-base">
-            <div className="py-4 px-2 border-b border-vscode-selection mb-4 flex justify-between items-end">
+            <div className="py-4 px-2 border-b border-vscode-selection mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-2 sm:gap-0">
                 <h1 className="text-xl font-bold text-vscode-blue">
                     ~/news/aggregator.log
                 </h1>
-                <div className="text-xs text-vscode-gray flex gap-4">
+                <div className="text-xs text-vscode-gray flex flex-col sm:flex-row gap-1 sm:gap-4">
                     <span>Data Source: V2EX Hot (Cached)</span>
                     <span>Last Update: {lastUpdateTime}</span>
                 </div>

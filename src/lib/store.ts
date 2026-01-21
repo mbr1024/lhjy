@@ -77,3 +77,35 @@ export async function saveCacheData(items: NewsItem[]): Promise<void> {
         throw error;
     }
 }
+
+// 单条记录增量更新（分析完一个入库一个）
+export async function upsertItem(item: NewsItem): Promise<void> {
+    try {
+        if (!turso) return;
+
+        // 使用 INSERT OR REPLACE 实现 upsert
+        await turso.execute(
+            `INSERT OR REPLACE INTO news_items (id, title, source, time, link, summary) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+                item.id,
+                item.title,
+                item.source,
+                item.time,
+                item.link,
+                JSON.stringify(item.summary)
+            ]
+        );
+
+        // 更新时间戳
+        await turso.execute(
+            'UPDATE cache_metadata SET last_updated = ? WHERE key = ?',
+            [Date.now(), 'news_cache']
+        );
+
+        console.log(`[Turso] Saved item: ${item.title.substring(0, 30)}...`);
+    } catch (error) {
+        console.error('Turso upsertItem error:', error);
+        throw error;
+    }
+}
