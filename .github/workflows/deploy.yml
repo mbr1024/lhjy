@@ -39,9 +39,9 @@ jobs:
             docker rm lhjy-app || true
             echo "✅ 旧容器已清理"
             
-            # 3. 删除旧镜像（可选，节省空间）
+            # 3. 删除旧镜像
             echo "🧹 [3/5] 清理旧镜像..."
-            docker rmi lhjy-app || true
+            docker rmi -f lhjy-app || true
             
             # 4. 构建新镜像
             echo "� [4/5] 构建 Docker 镜像..."
