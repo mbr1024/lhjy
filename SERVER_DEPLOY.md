@@ -15,16 +15,49 @@
 ssh user@your-server-ip
 ```
 
-### 2. 克隆代码仓库
+### 2. 获取代码
+
+#### 方式 A：使用 Git（推荐）
 
 ```bash
-# 首次部署
-git clone <your-git-repo-url> lhjy
+# 安装 Git（如果未安装）
+# CentOS/RHEL: sudo yum install git -y
+# Ubuntu/Debian: sudo apt install git -y
+
+# 克隆代码
+git clone https://github.com/mbr1024/lhjy.git
 cd lhjy
 
-# 更新部署（如果已经克隆过）
-cd lhjy
+# 更新代码
 git pull origin main
+```
+
+#### 方式 B：从本地上传（无需 Git）
+
+在本地电脑执行：
+
+```bash
+# 方法 1: 使用上传脚本（推荐）
+# 编辑 upload-to-server.sh 配置服务器信息，或使用环境变量
+SERVER_USER=root SERVER_HOST=your-server-ip SERVER_PATH=~/lhjy ./upload-to-server.sh
+
+# 方法 2: 手动打包上传
+tar -czf lhjy.tar.gz --exclude=node_modules --exclude=.next --exclude=.git .
+scp lhjy.tar.gz user@server-ip:/tmp/
+
+# 然后在服务器上解压
+ssh user@server-ip
+mkdir -p ~/lhjy && cd ~/lhjy
+tar -xzf /tmp/lhjy.tar.gz
+chmod +x deploy.sh
+```
+
+#### 方式 C：使用 wget/curl 下载
+
+```bash
+mkdir -p ~/lhjy && cd ~/lhjy
+curl -L https://github.com/mbr1024/lhjy/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1
+chmod +x deploy.sh
 ```
 
 ### 3. 配置环境变量
