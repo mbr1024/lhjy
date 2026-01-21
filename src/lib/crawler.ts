@@ -64,6 +64,9 @@ export async function updateData(): Promise<boolean> {
                             `#${i + 1} @${r.member.username}: ${r.content}`
                         ).join('\n')
                         : "暂无评论";
+                } else {
+                    const errBody = await repliesRes.text().catch(() => 'No body');
+                    console.error(`[Crawler Warning] Failed to fetch replies for ${item.id}: ${repliesRes.status} ${repliesRes.statusText}`, errBody.substring(0, 100));
                 }
 
                 // Delay 1s to be nice
