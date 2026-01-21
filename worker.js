@@ -20,7 +20,11 @@ export default {
             // 1. 获取热榜: /
             if (url.pathname === '/' || url.pathname === '/hot') {
                 const response = await fetch('https://www.v2ex.com/api/topics/hot.json', {
-                    headers: { 'User-Agent': userAgent }
+                    headers: {
+                        'User-Agent': userAgent,
+                        'Referer': 'https://www.v2ex.com/',
+                        'Origin': 'https://www.v2ex.com'
+                    }
                 });
                 return new Response(response.body, {
                     status: response.status,
@@ -37,7 +41,11 @@ export default {
 
                 const targetUrl = `https://www.v2ex.com/api/replies/show.json?topic_id=${topicId}`;
                 const response = await fetch(targetUrl, {
-                    headers: { 'User-Agent': userAgent }
+                    headers: {
+                        'User-Agent': userAgent,
+                        'Referer': `https://www.v2ex.com/t/${topicId}`,
+                        'Origin': 'https://www.v2ex.com'
+                    }
                 });
 
                 // 检查上游状态
